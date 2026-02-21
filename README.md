@@ -23,15 +23,16 @@ You can easily spin up both the Go API and the PostgreSQL database using Docker.
 2. **Access the API**
    The server will be available at `http://localhost:8080`. The database will be available at `localhost:5432`.
 
-*- Note on Seeding: If using Docker, you can run `docker exec grade_api ./main` to manually trigger seed scripts if they are compiled, but standard practice is running `go run seed/seed.go` with `.env` pointing to `localhost` to populate your dockerized DB.*
+*- Note on Seeding: If using Docker, you can run `docker exec grade_api ./main` to manually trigger seed scripts if they are compiled, but standard practice is running `docker exec grade_api go run seed/seed.go` to populate your dockerized DB.*
 
 <hr/>
 
 ### Running Locally (Without Docker)
 
 1. **Install Dependencies**
-   Run the following command to download all required packages:
+   Navigate to the backend directory and download all required packages:
    ```bash
+   cd backend
    go mod tidy
    ```
 
@@ -41,11 +42,13 @@ You can easily spin up both the Go API and the PostgreSQL database using Docker.
 3. **Database Seeding**
    To easily test the system, run the seed script which populates the database with an Admin, Teacher, Student, a course, and a grade.
    ```bash
+   cd backend
    go run seed/seed.go
    ```
 
 4. **Running the Server**
    ```bash
+   cd backend
    go run main.go
    ```
    The server will start on port `8080`.
@@ -131,34 +134,12 @@ The calculation handles multiple courses properly and skips courses where they a
 - `GET /api/teacher/courses` - View all courses assigned to the logged-in teacher.
 - `POST /api/teacher/enrollments` - Enroll a student into the teacher's course.
 - `POST /api/teacher/grades` - Add or update a grade for a student in a course (Upsert logic).
-     - Request body: `{"student_id": 1, "course_id": 1, "marks": 85.5}`
 - `GET /api/teacher/courses/:courseId/stats` - Get a count of A, B, C, D, F grades for a course.
 
 ### Student Routes
 - `GET /api/student/courses` - View all courses the student is enrolled in.
 - `GET /api/student/grades` - View all grades the student has received.
 - `GET /api/student/gpa` - Calculate and view the overall GPA.
-
----
-
-## 🛠️ Troubleshooting & Common Errors
-
-If you run into issues while building or seeding the project, here are the exact solutions for the problems you might face:
-
-### 1. `failed SASL auth: FATAL: password authentication failed for user "postgres"`
-**Why it happens:** You tried to run `go run seed/seed.go` on your host machine while the project uses Docker. Your local machine might have a conflicting PostgreSQL installation.
-**The Fix:** You must run the seed script directly *inside* the Docker container where the database lives safely. Run this:
-```bash
-docker exec -it grade_api go run seed/seed.go
-```
-
-### 2. Gin/Go Version Dependency Error during Docker Build
-**Why it happens:** Newer versions of standard HTTP packages (like `github.com/gin-contrib/sse`) strictly require Go 1.24, which broke the older `1.22-alpine` build.
-**The Fix:** We updated the `backend/Dockerfile` to use `golang:1.24-alpine` so compilation passes automatically. Ensure you don't downgrade the `Dockerfile` base image.
-
-### 3. Connection refused on localhost:8080 (Docker Container Networking)
-**Why it happens:** When running locally, Gin binds to `localhost:8080` under the hood. In Docker, `localhost` only refers to the isolated container, making it completely unreachable from your Windows machine!
-**The Fix:** We changed `r.Run(":" + port)` to `r.Run("0.0.0.0:" + port)` in `main.go`. This tells Gin to expose the port publicly so your physical machine can access the Docker network.
 
 ## Quality of Life / Professional Features Included
 - **Health Check Endpoint**: Shows the server is running without needing authentication.
